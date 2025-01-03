@@ -56,32 +56,41 @@ def handle_info(message):
     try:
         index_number = message.text.split()[1]  # Extract the index number from the command
         user_id = message.from_user.id  # Get the userID from the message
+        
+        # Assuming getGPA returns a JSON string
         info = getGPA(index_number, user_id)  # Pass userID to the getGPA function
         info_json = json.loads(info)  # Parse the JSON response
         
-        if 'error' in info_json:
+        # Check if the response contains error information
+        if info_json.get('status') == 'error':
             bot.reply_to(message, "Index number not found. Please provide a valid index number.")
-            return
-        
-        formatted_info = (
-            f"👋 Hi {message.from_user.first_name}, here is the information for index number {index_number}:\n\n"
-            f"📇 Index No: \t{info_json.get('index', 'N/A')}\n"
-            f"👤 Name: \t{info_json.get('name', 'N/A')}\n"
-            f"📚 Combination: \t{info_json.get('combB', 'N/A')} | {info_json.get('combA', 'N/A')}\n\n"
-            f"📊 Level 03 Credits: \t{info_json.get('credits', 'N/A')}\n"
-            f"📈 Level 03 GPA: \t{info_json.get('gpa', 'N/A')}\n"
-            f"🏅 Level 03 Rank: \t{info_json.get('rank', 'N/A')}\n\n"
-            "⚠️ Disclaimer:\n"
-            "> This information is provided for general informational purposes only.\n"
-            "> The data is based on result sheets published by the faculty office.\n"
-            "> We do not guarantee the accuracy, completeness, or reliability of the information provided.\n"
-            "> Please verify the information with official sources."
-        )
-        bot.reply_to(message, formatted_info)
+        else:
+            # If the response is valid, format the information
+            formatted_info = (
+                f"👋 Hi {message.from_user.first_name}, here is the information for index number {index_number}:\n\n"
+                f"📇 Index No: \t{info_json.get('index', 'N/A')}\n"
+                f"👤 Name: \t{info_json.get('name', 'N/A')}\n"
+                f"📚 Combination: \t{info_json.get('combB', 'N/A')} | {info_json.get('combA', 'N/A')}\n\n"
+                f"📊 Level 03 Credits: \t{info_json.get('credits', 'N/A')}\n"
+                f"📈 Level 03 GPA: \t{info_json.get('gpa', 'N/A')}\n"
+                f"🏅 Level 03 Rank: \t{info_json.get('rank', 'N/A')}\n\n"
+                "⚠️ Disclaimer:\n"
+                "> This information is provided for general informational purposes only.\n"
+                "> The data is based on result sheets published by the faculty office.\n"
+                "> We do not guarantee the accuracy, completeness, or reliability of the information provided.\n"
+                "> Please verify the information with official sources."
+            )
+            bot.reply_to(message, formatted_info)
     except IndexError:
-        bot.send_message(message.chat.id, "Please provide an index number with the /gpa command.")
+        # Handle missing index number error
+        bot.send_message(message.chat.id, "Please provide an index number with the /gpa command. Example: /gpa 202***.")
     except json.JSONDecodeError:
+        # Handle invalid JSON response error
         bot.send_message(message.chat.id, "Error decoding the response. Please try again later.")
+    except Exception as e:
+        # Catch other errors and notify the user
+        bot.send_message(message.chat.id, f"An unexpected error occurred: {str(e)}")
+
 
 # run the bot
 print("Starting bot polling...")

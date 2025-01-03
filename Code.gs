@@ -39,6 +39,8 @@ function getGPA(e) {
 
       // Create an object to map column headers to their corresponding row values
       var result = {
+        status: "success",
+        message: "Request was successful",
         index: data[i][1],
         name: data[i][2],
         combA: data[i][3],
@@ -57,6 +59,7 @@ function getGPA(e) {
 
   // If index number not found, return a message in JSON format
   var notFoundResult = {
+    status: "error",
     message: "Index number not found",
   };
   return ContentService.createTextOutput(
