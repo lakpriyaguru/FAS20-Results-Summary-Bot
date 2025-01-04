@@ -3,14 +3,12 @@ import telebot
 import json
 
 bot = telebot.TeleBot("7888773252:AAH-DTbyTWpqnxhWedXXOKT2LJiOQXCaMhE")
-
-# Replace with your Apps Script web app URL
 APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyW1OSo5rxzo9_8m2Zsw3a0d6M8Lo0EETJyQqS8JUeqp8joKDvWTC3RfTpuZDFnWjM0/exec"
 
-def getGPA(index_number, user_id):
+def get_gpa(index_number):
     try:
         # Send the userID along with the other parameters
-        response = requests.get(APPS_SCRIPT_URL, params={'function': 'getGPA', 'index': index_number, 'userID': user_id})
+        response = requests.get(APPS_SCRIPT_URL, params={'function': 'getGPA', 'index': index_number})
         response.raise_for_status()  # Raise an error for bad HTTP status
         print(f"Response: {response.text}")  # Debugging line
         return response.text
@@ -38,6 +36,11 @@ def greet(message):
 def help(message):
     bot.send_message(message.chat.id, "ℹ️ Send me your index number with the /gpa command and I will tell you your CGPA. If you have any queries, feel free to ask. 😊")
 
+# about message
+@bot.message_handler(commands=['about'])
+def about(message):
+    bot.send_message(message.chat.id, "🤖 This bot is created by @lakpriyaguru. If you have any problems or queries, feel free to ask. 😊 \n\n📜 Version History:\n- v1.0: Display Level 03 Academic Details")
+
 # handle /results <index> command
 # @bot.message_handler(commands=['results'])
 # def handle_results(message):
@@ -55,10 +58,9 @@ def help(message):
 def handle_info(message):
     try:
         index_number = message.text.split()[1]  # Extract the index number from the command
-        user_id = message.from_user.id  # Get the userID from the message
         
         # Assuming getGPA returns a JSON string
-        info = getGPA(index_number, user_id)  # Pass userID to the getGPA function
+        info = get_gpa(index_number)  # Pass userID to the getGPA function
         info_json = json.loads(info)  # Parse the JSON response
         
         # Check if the response contains error information
