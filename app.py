@@ -5,7 +5,7 @@ import logging
 from datetime import datetime
 
 bot = telebot.TeleBot("7888773252:AAH-DTbyTWpqnxhWedXXOKT2LJiOQXCaMhE")
-APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby3Ic9yX5Xg_PyfbkqOd7Wk21cApgRD8Y7y-ZAxMuvD3sE3aztD7aPcgRtf8eWNV2ax/exec"
+APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyb42gvAQcuPLx3yGvzmG5RmSb1KC0JoNUi1GBETy6ORHRi0e32kPEAK81xrCZ2gD30/exec"
 ADMIN_USER_ID = 558847311
 
 # Configure logging
@@ -35,15 +35,43 @@ def getSummary(index_number, user_id):
         print(f"Request error: {e}")
         return json.dumps({"error": str(e)})
 
-def getDean(level):
+def getDean(level, user_id):
     try:
-        response = requests.get(APPS_SCRIPT_URL, params={'function': f'getDean', 'level': level})
+        response = requests.get(APPS_SCRIPT_URL, params={'function': 'getDean', 'level': level, 'userID': user_id})
         response.raise_for_status()  # Raise an error for bad HTTP status
         log_print(f"Response: {response.text}")  # Log the response
         return response.text
     except requests.exceptions.RequestException as e:
         print(f"Request error: {e}")
         return json.dumps({"error": str(e)})
+
+def format_dean_list(first_name, dean_json, level):
+    records = dean_json.get("records", [])
+    total_students = len(records)
+    
+    # Construct the table header
+    table_header = f"| {'Rk':<2} | {'Idx':<6} | {'Name':<12} | {'Comb':<7} | {'GPA':<4} |\n"
+    table_header += f"|{'-'*4}|{'-'*8}|{'-'*14}|{'-'*9}|{'-'*6}|\n"
+    
+    # Construct the table rows
+    table_rows = ""
+    for record in records:
+        table_rows += f"| {record['rank']:<2} | {record['index']:<6} | {record['name'][:12]:<12} | {record['combB']:<7} | {record['gpa']:<4.2f} |\n"
+
+    # Combine the parts
+    formatted_dean = (
+        f"👋 Hello *{first_name}*, here is the Dean's List for *Level {level}*:\n\n"
+        f"🎓 *Total Students:* \t{total_students}\n\n"
+        f"📋 *Dean's List Table:*\n"
+        f"```\n{table_header}{table_rows}```\n"
+        "⚠️ *Disclaimer:*\n"
+        "_> This information is provided for general informational purposes only.\n"
+        "> The data is based on result sheets published by the faculty office.\n"
+        "> We do not guarantee the accuracy, completeness, or reliability of the information provided.\n"
+        "> Please verify the information with official sources._"
+    )
+    
+    return formatted_dean
 
 # start message
 @bot.message_handler(commands=['start'])
@@ -65,9 +93,9 @@ def help(message):
 @bot.message_handler(commands=['about'])
 def about(message):
     if message.chat.type not in ['group', 'supergroup'] and message.from_user.id != ADMIN_USER_ID:
-        bot.reply_to(message, "🤖 This bot was created by @lakpriyaguru. If you have any issues or questions, feel free to reach out. 😊 \n\n📜 Version History:\n- v1.0: Display Level 03 Academic Details \n- v2.0: Display Overall GPA Details \n\n🔗 Join the group to access the bot: https://t.me/+suBdxTEim85mZjM1")
+        bot.reply_to(message, "🤖 This bot was created by @lakpriyaguru. If you have any issues or questions, feel free to reach out. 😊 \n\n📜 Version History:\n- v1.0: Display Level 03 Academic Details \n- v2.0: Display Overall GPA Details \n- v2.1: Add Level 03 Dean List \n\n🔗 Join the group to access the bot: https://t.me/+suBdxTEim85mZjM1")
         return
-    bot.send_message(message.chat.id, "🤖 This bot was created by @lakpriyaguru. If you have any issues or questions, feel free to reach out. 😊 \n\n📜 Version History:\n- v1.0: Display Level 03 Academic Details \n- v2.0: Display Overall GPA Details")
+    bot.send_message(message.chat.id, "🤖 This bot was created by @lakpriyaguru. If you have any issues or questions, feel free to reach out. 😊 \n\n📜 Version History:\n- v1.0: Display Level 03 Academic Details \n- v2.0: Display Overall GPA Details \n- v2.1: Add Level 03 Dean List")
 
 # handle /summary <index> command
 @bot.message_handler(commands=['summary'])
@@ -108,7 +136,7 @@ def handle_info(message):
             )
             bot.send_message(chat_id=message.from_user.id, text=formatted_info, parse_mode='Markdown')
             # Send the message privately to the requesting user
-            bot.reply_to(message, "✅ GPA details have been sent to you in a private message. Please check your inbox. 😉")
+            bot.reply_to(message, f"👋 Dear *{message.from_user.first_name}*, the requested summary for *{index_number}* - *{info_json.get('name', 'N/A')}* has been sent to you in a private message. 📩 Please check your inbox. 😊", parse_mode='Markdown')
     except IndexError:
         # Handle missing index number error
         bot.send_message(message.chat.id, "🚫 Please provide an index number with the /summary command. Example: /summary 202***.")
@@ -118,6 +146,51 @@ def handle_info(message):
     except Exception as e:
         # Catch other errors and notify the user
         bot.send_message(message.chat.id, f"🚫 An unexpected error occurred: {str(e)}. Please try again later. 😊")
+
+# handle /dean <level> command
+@bot.message_handler(commands=['dean'])
+def handle_dean(message):
+    if message.chat.type not in ['group', 'supergroup'] and message.from_user.id != ADMIN_USER_ID:
+        bot.reply_to(message, "🚫 This command is only available in groups. \n\n🔗 Please join the group to use the bot: https://t.me/+suBdxTEim85mZjM1")
+        return
+    try:
+        user_id = message.from_user.id  # Get the user ID from the message object
+        level = message.text.split()[1]  # Extract the level from the command
+        
+        log_print(f"Request: {{user_id: {user_id}, 'function': 'getDean', 'level': {level}}}")
+
+        # Assuming getDean returns a JSON string   
+        dean = getDean(level, user_id)  # Pass level to the getDean function
+
+        dean_json = json.loads(dean)  # Parse the JSON response
+        
+        # Check if the response contains error information
+        if dean_json.get('status') == 'error':
+            bot.reply_to(message, "🚫 Level not found. Please provide a valid level. 📇")
+        else:
+            # If the response is valid, format the information
+            formatted_message = format_dean_list(message.from_user.first_name, dean_json, level)
+            bot.send_message(chat_id=message.from_user.id, text=formatted_message, parse_mode='Markdown')
+            # Send the message privately to the requesting user
+            bot.reply_to(message, f"👋 Dear *{message.from_user.first_name}*, the Dean's List for *Level {level}* has been sent to you in a private message. 📩 Please check your inbox. 😊", parse_mode='Markdown')
+    except IndexError:
+        # Handle missing level error
+        bot.send_message(message.chat.id, "🚫 Please provide a level with the /dean command. Example: /dean *.")
+    except json.JSONDecodeError:
+        # Handle invalid JSON response error
+        bot.send_message(message.chat.id, "🚫 Error decoding the response. Please try again later. 😊")
+    except Exception as e:
+        # Catch other errors and notify the user
+        bot.send_message(message.chat.id, f"🚫 An unexpected error occurred: {str(e)}. Please try again later. 😊")
+
+# make new group announcement
+@bot.message_handler(commands=['new_update'])
+def announcement(message):
+    if message.chat.type in ['group', 'supergroup'] and message.from_user.id == ADMIN_USER_ID:
+        announcement_message = bot.send_message(message.chat.id, "📢 New Update: The Level 03 Dean's List has been updated! 🎉\n\nTry the /dean command followed by the level to see the dean's list. Example: /dean *")
+        bot.pin_chat_message(message.chat.id, announcement_message.message_id)
+    else:
+        bot.reply_to(message, "🚫 This command is only available in groups and can only be used by the admin.")
 
 # run the bot
 # print("Starting Telegram Bot...")

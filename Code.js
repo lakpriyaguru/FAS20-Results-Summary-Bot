@@ -20,7 +20,7 @@ function getSummary(e) {
   var userID = e.parameter.userID;
   var index = e.parameter.index;
 
-  log(userID, "getGPA", index);
+  log(userID, "getSummary", index);
 
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
 
@@ -28,6 +28,7 @@ function getSummary(e) {
 
   if (!sheet) {
     var errorResult = {
+      status: "error",
       message: "The specified sheet does not exist",
     };
     return ContentService.createTextOutput(
@@ -55,21 +56,26 @@ function getSummary(e) {
         JSON.stringify(result)
       ).setMimeType(ContentService.MimeType.JSON);
     } else {
-      // var notFoundResult = {status: "error", message: "Index number not found",};
-      // return ContentService.createTextOutput(JSON.stringify(notFoundResult)).setMimeType(ContentService.MimeType.JSON);
+      var notFoundResult = {
+        status: "error",
+        message: "Index number not found",
+      };
+      return ContentService.createTextOutput(
+        JSON.stringify(notFoundResult)
+      ).setMimeType(ContentService.MimeType.JSON);
     }
   }
 }
 
 // Function to log requests
-function log(usedID, requestFunc, index) {
+function log(usedID, requestFunc, variable) {
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   var logSheet = spreadsheet.getSheetByName("RequestLog");
 
   // Create the sheet and set headers if it does not exist
   if (!logSheet) {
     logSheet = spreadsheet.insertSheet("RequestLog");
-    logSheet.appendRow(["Timestamp", "UserID", "Request", "Index"]);
+    logSheet.appendRow(["Timestamp", "UserID", "Request", "Variable"]);
   }
 
   // Ensure headers are correct
@@ -78,17 +84,82 @@ function log(usedID, requestFunc, index) {
     headers[0] !== "Timestamp" ||
     headers[1] !== "UserID" ||
     headers[2] !== "Request" ||
-    headers[3] !== "Index"
+    headers[3] !== "Variable"
   ) {
     logSheet
       .getRange(1, 1, 1, 4)
-      .setValues([["Timestamp", "UserID", "Request", "Index"]]);
+      .setValues([["Timestamp", "UserID", "Request", "Variable"]]);
   }
 
   // Prepare data to append
   var timestamp = new Date();
-  var data = [timestamp, usedID, requestFunc, index];
+  var data = [timestamp, usedID, requestFunc, variable];
 
   // Append data to the sheet
   logSheet.appendRow(data);
+}
+
+// function to getDean
+function getDean(e) {
+  var userID = e.parameter.userID;
+  var level = e.parameter.level;
+
+  log(userID, "getDean", level);
+
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet;
+
+  // Determine which sheet to use based on the level
+  if (level == "1") {
+    sheet = spreadsheet.getSheetByName("DEAN_L01");
+  } else if (level == "2") {
+    sheet = spreadsheet.getSheetByName("DEAN_L02");
+  } else if (level == "3") {
+    sheet = spreadsheet.getSheetByName("DEAN_L03");
+  } else {
+    // Handle invalid level
+    var errorResult = { status: "error", message: "Invalid level specified" };
+    return ContentService.createTextOutput(
+      JSON.stringify(errorResult)
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // Handle missing sheet
+  if (!sheet) {
+    var errorResult = {
+      status: "error",
+      message: "The specified sheet does not exist",
+    };
+    return ContentService.createTextOutput(
+      JSON.stringify(errorResult)
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // Get all data from the sheet
+  var data = sheet.getDataRange().getValues();
+
+  // Prepare a response object to hold all records
+  var records = [];
+  for (var i = 1; i < data.length; i++) {
+    records.push({
+      index: data[i][1],
+      name: data[i][3],
+      // combA: data[i][4],
+      combB: data[i][5],
+      // credit: data[i][6],
+      gpa: data[i][8],
+      rank: data[i][9],
+    });
+  }
+
+  // Return all records as JSON
+  var result = {
+    status: "success",
+    message: "All records retrieved successfully",
+    records: records,
+  };
+
+  return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(
+    ContentService.MimeType.JSON
+  );
 }
