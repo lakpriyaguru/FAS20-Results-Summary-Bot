@@ -55,16 +55,15 @@ function getSummary(e) {
       return ContentService.createTextOutput(
         JSON.stringify(result)
       ).setMimeType(ContentService.MimeType.JSON);
-    } else {
-      var notFoundResult = {
-        status: "error",
-        message: "Index number not found",
-      };
-      return ContentService.createTextOutput(
-        JSON.stringify(notFoundResult)
-      ).setMimeType(ContentService.MimeType.JSON);
     }
   }
+  var notFoundResult = {
+    status: "error",
+    message: "Index number not found",
+  };
+  return ContentService.createTextOutput(
+    JSON.stringify(notFoundResult)
+  ).setMimeType(ContentService.MimeType.JSON);
 }
 
 // Function to log requests

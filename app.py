@@ -5,7 +5,7 @@ import logging
 from datetime import datetime
 
 bot = telebot.TeleBot("7888773252:AAH-DTbyTWpqnxhWedXXOKT2LJiOQXCaMhE")
-APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyb42gvAQcuPLx3yGvzmG5RmSb1KC0JoNUi1GBETy6ORHRi0e32kPEAK81xrCZ2gD30/exec"
+APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby_kpH8fgAxr1PuZyqL4qcahluEkWBkHOygzL2n5QGABlHudlfEvbuf0D5H9TMnLjN7/exec"
 ADMIN_USER_ID = 558847311
 
 # Configure logging
