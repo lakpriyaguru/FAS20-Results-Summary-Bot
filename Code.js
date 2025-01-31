@@ -8,6 +8,8 @@ function doGet(e) {
     return getSummary(e);
   } else if (functionName == "getDean") {
     return getDean(e);
+  } else if (functionName == "getResults") {
+    return getResults(e);
   } else {
     return ContentService.createTextOutput("Invalid function name").setMimeType(
       ContentService.MimeType.JSON
@@ -50,7 +52,10 @@ function getSummary(e) {
         credit: data[i][20],
         gpa: data[i][22],
         rank: data[i][23],
-        repeat: data[i][24],
+        repeatTot: data[i][24],
+        repeatL1: data[i][9],
+        repeatL2: data[i][14],
+        repeatL3: data[i][19],
       };
       return ContentService.createTextOutput(
         JSON.stringify(result)
@@ -161,4 +166,195 @@ function getDean(e) {
   return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(
     ContentService.MimeType.JSON
   );
+}
+
+// Function to handle /results endpoint
+function getResults(e) {
+  var userID = e.parameter.userID; // Retrieve userID if needed for logging
+  var index = e.parameter.index; // Index number of the student
+
+  log(userID, "getResults", index); // Log the request
+
+  // Get the active spreadsheet
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+
+  // Determine the combination sheets based on the student's combination
+  var sheetNameA, sheetNameB, name;
+  var allSheet = spreadsheet.getSheetByName("ALL");
+  if (!allSheet) {
+    return ContentService.createTextOutput(
+      JSON.stringify({ status: "error", message: "ALL sheet not found" })
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  var allData = allSheet.getDataRange().getValues();
+  for (var i = 1; i < allData.length; i++) {
+    if (allData[i][1] == index) {
+      name = allData[i][2];
+      sheetNameA = allData[i][3]; // Assuming combination A is in the 4th column
+      sheetNameB = allData[i][4]; // Assuming combination B is in the 5th column
+      break;
+    }
+  }
+
+  if (!sheetNameA || !sheetNameB) {
+    return ContentService.createTextOutput(
+      JSON.stringify({
+        status: "error",
+        message: "Index number not found in ALL sheet",
+      })
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // Retrieve data from the specified combination sheets
+  var sheetA = spreadsheet.getSheetByName(sheetNameA);
+  var sheetB = spreadsheet.getSheetByName(sheetNameB);
+
+  if (!sheetA || !sheetB) {
+    return ContentService.createTextOutput(
+      JSON.stringify({
+        status: "error",
+        message:
+          "Combination sheet(s) not found: " +
+          (sheetA ? "" : sheetNameA) +
+          (sheetB ? "" : ", " + sheetNameB),
+      })
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // Retrieve module mapping
+  var moduleSheet = spreadsheet.getSheetByName("Module_Details");
+  if (!moduleSheet) {
+    return ContentService.createTextOutput(
+      JSON.stringify({ status: "error", message: "Modules sheet not found" })
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  var moduleData = moduleSheet.getDataRange().getValues();
+  var moduleMap = {};
+  for (var i = 1; i < moduleData.length; i++) {
+    moduleMap[moduleData[i][0]] = moduleData[i][1]; // Assuming 1st column is code, 2nd is name
+  }
+
+  var dataA = sheetA.getDataRange().getValues();
+  var headersA = dataA[0]; // First row contains subject names
+
+  var dataB = sheetB.getDataRange().getValues();
+  var headersB = dataB[0]; // First row contains subject names
+
+  // Define included columns for each combination
+  var includeColumnsA = defineColumns(sheetNameA);
+  var includeColumnsB = defineColumns(sheetNameB);
+
+  var result = {
+    status: "success",
+    message: "Request was successful",
+    index: index,
+    name: name,
+    totalSubjects: 0,
+    subjects: [],
+  };
+
+  // Aggregate results from Sheet A
+  for (var i = 1; i < dataA.length; i++) {
+    if (dataA[i][0] == index) {
+      for (var j = 1; j < headersA.length; j++) {
+        if (includeColumnsA.includes(j)) {
+          var code = headersA[j];
+          result.subjects.push({
+            subject: code,
+            name: moduleMap[code] || "Unknown",
+            grade: dataA[i][j],
+          });
+        }
+      }
+      break; // Stop searching once the index is found
+    }
+  }
+
+  // Aggregate results from Sheet B
+  for (var i = 1; i < dataB.length; i++) {
+    if (dataB[i][0] == index) {
+      for (var j = 1; j < headersB.length; j++) {
+        if (includeColumnsB.includes(j)) {
+          var code = headersB[j];
+          result.subjects.push({
+            subject: code,
+            name: moduleMap[code] || "Unknown",
+            grade: dataB[i][j],
+          });
+        }
+      }
+      break; // Stop searching once the index is found
+    }
+  }
+
+  result.totalSubjects = result.subjects.length; // Calculate total subjects
+
+  return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(
+    ContentService.MimeType.JSON
+  );
+}
+
+// Helper function to define included columns based on sheet name
+function defineColumns(sheetName) {
+  if (sheetName === "JM_1A") {
+    return [1, 2, 3, 4, 5, 6, 7, 12, 13, 14, 15, 16];
+  } else if (sheetName === "JM_1B") {
+    return [1, 2, 3, 4, 5, 10, 11, 12, 13, 14, 15];
+  } else if (sheetName === "JM_2A") {
+    return [1, 2, 3, 4, 5, 6, 7, 12, 13, 14, 15, 16, 17, 18];
+  } else if (sheetName === "JM_2B") {
+    return [1, 2, 3, 4, 5, 6, 7, 12, 13, 14, 15, 16, 17, 18, 19];
+  } else if (sheetName === "JM_3B") {
+    return [1, 2, 3, 4, 5, 6, 11, 12, 13, 14, 15, 16, 17, 18];
+  } else if (sheetName === "JM_3C") {
+    return [1, 2, 3, 4, 5, 6, 11, 12, 13, 14, 15, 16];
+  } else if (sheetName === "JM_4A") {
+    return [1, 2, 3, 4, 5, 6, 11, 12, 13, 14, 15, 16];
+  } else if (sheetName === "JM_4B") {
+    return [1, 2, 3, 4, 5, 6, 7, 12, 13, 14, 15, 16, 17, 18];
+  } else if (sheetName === "JM_4C") {
+    return [1, 2, 3, 4, 5, 6, 11, 12, 13, 14, 15, 16, 17, 18];
+  } else if (sheetName === "GEN_1A") {
+    return [2, 3, 4, 5, 6, 7, 8, 9, 14, 15, 16, 17, 18];
+  } else if (sheetName === "GEN_1B") {
+    return [2, 3, 4, 5, 6, 7, 12, 13, 14, 15, 16, 17];
+  } else if (sheetName === "GEN_1C") {
+    return [2, 3, 4, 5, 6, 11, 12, 13, 14, 15];
+  } else if (sheetName === "GEN_2A") {
+    return [];
+  } else if (sheetName === "GEN_2C") {
+    return [2, 3, 4, 5, 6, 7, 8, 13, 14, 15, 16, 17, 18];
+  } else if (sheetName === "GEN_3A") {
+    return [2, 3, 4, 5, 6, 7, 8, 13, 14, 15, 16, 17, 18];
+  } else if (sheetName === "GEN_3B") {
+    return [2, 3, 4, 5, 6, 7, 8, 13, 14, 15, 16, 17, 18, 19];
+  } else if (sheetName === "GEN_3C") {
+    return [2, 3, 4, 5, 6, 7, 12, 13, 14, 15, 16, 17, 18, 19];
+  } else if (sheetName === "SP_CMIS") {
+    return [2, 3, 4, 5, 6, 11, 12, 13, 14, 15];
+  } else if (sheetName === "SP_ELTN") {
+    return [2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 16, 17, 18, 19, 20, 21, 22];
+  } else if (sheetName === "SP_IMGT") {
+    return [2, 3, 4, 5, 6, 7, 12, 13, 14, 15, 16, 17, 18];
+  } else if (sheetName === "SP_MMST") {
+    return [2, 3, 4, 5, 6, 11, 12, 13, 14, 15, 16];
+  } else if (sheetName === "COMB_1") {
+    return [
+      1, 2, 3, 4, 5, 6, 7, 8, 13, 14, 15, 16, 17, 18, 19, 24, 25, 26, 27, 28,
+      29, 34, 35, 36, 37, 38, 39, 40, 41,
+    ];
+  } else if (sheetName === "COMB_2") {
+    return [
+      1, 2, 3, 4, 5, 6, 7, 8, 13, 14, 15, 16, 17, 18, 19, 24, 25, 26, 27, 28,
+      29, 30, 35, 36, 37, 38, 39, 40, 41, 42, 43,
+    ];
+  } else if (sheetName === "COMB_3") {
+    return [
+      1, 2, 3, 4, 5, 6, 7, 8, 13, 14, 15, 16, 17, 18, 19, 24, 25, 26, 27, 28,
+      29, 30, 35, 36, 37, 38, 39, 40,
+    ];
+  }
+  return [];
 }
