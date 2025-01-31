@@ -1,5 +1,7 @@
 # FAS20 Results Summary Bot
 
+![Demonstration Video](gif/demo_clip.gif)
+
 ## 📌 Overview
 
 The **FAS20 Results Summary Bot** is a Telegram bot designed to automate the summarization and analysis of university exam results. It fetches data from **Google Sheets**, processes it using **Google Apps Script** and **Python**, and provides students with concise performance summaries and insights. Hosted on **DigitalOcean**, the bot ensures efficient and real-time responses.
