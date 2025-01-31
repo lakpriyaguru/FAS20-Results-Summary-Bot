@@ -24,7 +24,7 @@ This bot streamlines result analysis by reducing manual effort and improving res
 
 ## 📬 Contact
 
-For queries or suggestions, reach out via [LinkedIn](https://www.linkedin.com/in/lakpriya-gurugamage/) or Telegram.
+For queries or suggestions, reach out via [LinkedIn](https://www.linkedin.com/in/lakpriyaguru/).
 
 ---
 
